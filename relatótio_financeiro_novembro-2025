@@ -1,0 +1,433 @@
+import React, { useState } from 'react';
+import { 
+  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
+  AreaChart, Area, ComposedChart, PieChart as RechartsPieChart, Cell
+} from 'recharts';
+import { 
+  TrendingDown, TrendingUp, AlertTriangle, DollarSign, PieChart, Activity, 
+  ArrowDownRight, ArrowUpRight, Search, Menu, User, Calendar, Truck, Users, Landmark, Package
+} from 'lucide-react';
+
+// --- DADOS (Extraídos do PDF) ---
+
+const monthlyData = [
+  { name: 'Set/25', receita: 2922521, despesa: 2415471, lucro: 507050 },
+  { name: 'Out/25', receita: 2790839, despesa: 3074435, lucro: -283596 },
+  { name: 'Nov/25', receita: 2422686, despesa: 2898861, lucro: -476175 },
+];
+
+const expenseBreakdown = [
+  { name: 'Administração', set: 814075, out: 890569, nov: 849095, trend: 'stable' },
+  { name: 'Pessoal', set: 269881, out: 390572, nov: 502411, trend: 'up' },
+  { name: 'Produção', set: 688963, out: 944171, nov: 707326, trend: 'down' },
+  { name: 'Financeiro/Trib.', set: 409366, out: 415710, nov: 329543, trend: 'down' },
+  { name: 'Imobilizado', set: 232386, out: 433413, nov: 510485, trend: 'up' },
+];
+
+// Dados Detalhados - PESSOAL
+const pessoalData = [
+  { name: 'Set', folha: 259401, prolabore: 2341 },
+  { name: 'Out', folha: 291004, prolabore: 66087 },
+  { name: 'Nov', folha: 294587, prolabore: 197201 },
+];
+
+// Dados Detalhados - LOGÍSTICA & ADM
+const logisticaData = [
+  { name: 'Combustíveis', set: 62439, out: 50704, nov: 74691 },
+  { name: 'Manut. Veículos', set: 24270, out: 36642, nov: 55476 },
+  { name: 'Uniformes', set: 1238, out: 1386, nov: 5570 },
+];
+
+// Dados Detalhados - TRIBUTÁRIO
+const tributarioData = [
+  { name: 'ICMS', valor: 193176, var: -7.25 },
+  { name: 'IRPJ', valor: 27436, var: -70.50 },
+  { name: 'CSLL', valor: 24401, var: -18.08 },
+  { name: 'PIS/COFINS', valor: 25158, var: -0.42 },
+];
+
+const productionDetails = [
+  { name: 'Farinha', valor: 421302, var: -24.8 },
+  { name: 'Pão Congelado', valor: 100750, var: 15.67 },
+  { name: 'Azeite', valor: 39012, var: -69.85 },
+  { name: 'Embalagens', valor: 69227, var: -63.53 },
+];
+
+// --- COMPONENTES UI ---
+
+const Card = ({ title, value, subtext, icon: Icon, trend, color }) => (
+  <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+    <div className="flex justify-between items-start mb-4">
+      <div>
+        <p className="text-slate-500 text-sm font-medium mb-1">{title}</p>
+        <h3 className="text-2xl font-bold text-slate-800">{value}</h3>
+      </div>
+      <div className={`p-2 rounded-lg ${color}`}>
+        <Icon size={20} className="text-white" />
+      </div>
+    </div>
+    <div className="flex items-center text-sm">
+      {trend === 'up' ? (
+        <span className="text-red-500 flex items-center font-semibold mr-2">
+          <ArrowUpRight size={16} className="mr-1" /> Aumento Crítico
+        </span>
+      ) : trend === 'down' ? (
+        <span className="text-red-500 flex items-center font-semibold mr-2">
+          <ArrowDownRight size={16} className="mr-1" /> Queda Alertante
+        </span>
+      ) : (
+        <span className="text-emerald-500 flex items-center font-semibold mr-2">
+          <Activity size={16} className="mr-1" /> Estável
+        </span>
+      )}
+      <span className="text-slate-400">{subtext}</span>
+    </div>
+  </div>
+);
+
+const SectionHeader = ({ title, subtitle }) => (
+  <div className="mb-6">
+    <h2 className="text-xl font-bold text-slate-800">{title}</h2>
+    <p className="text-slate-500 text-sm">{subtitle}</p>
+  </div>
+);
+
+// --- COMPONENTE PRINCIPAL ---
+
+export default function FinancialDashboard() {
+  const [activeTab, setActiveTab] = useState('overview');
+
+  const formatCurrency = (val) => 
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(val);
+
+  return (
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
+      {/* Sidebar - GRADIENTE */}
+      <nav className="fixed top-0 left-0 h-full w-20 bg-gradient-to-b from-red-700 via-orange-600 to-amber-500 flex flex-col items-center py-8 z-50 hidden md:flex shadow-lg transition-all">
+        <div className="mb-8 p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+          <PieChart className="text-white" size={24} />
+        </div>
+        
+        {/* Menu Items */}
+        <div className="flex flex-col gap-4 w-full px-4">
+            <button onClick={() => setActiveTab('overview')} className={`p-3 rounded-xl transition-colors ${activeTab === 'overview' ? 'bg-white text-orange-600 shadow-md' : 'text-white/80 hover:bg-white/20'}`} title="Visão Geral">
+            <Activity size={24} />
+            </button>
+            <button onClick={() => setActiveTab('pessoal')} className={`p-3 rounded-xl transition-colors ${activeTab === 'pessoal' ? 'bg-white text-orange-600 shadow-md' : 'text-white/80 hover:bg-white/20'}`} title="Pessoal e RH">
+            <Users size={24} />
+            </button>
+            <button onClick={() => setActiveTab('producao')} className={`p-3 rounded-xl transition-colors ${activeTab === 'producao' ? 'bg-white text-orange-600 shadow-md' : 'text-white/80 hover:bg-white/20'}`} title="Produção">
+            <Package size={24} />
+            </button>
+            <button onClick={() => setActiveTab('logistica')} className={`p-3 rounded-xl transition-colors ${activeTab === 'logistica' ? 'bg-white text-orange-600 shadow-md' : 'text-white/80 hover:bg-white/20'}`} title="Logística e Adm">
+            <Truck size={24} />
+            </button>
+            <button onClick={() => setActiveTab('tributario')} className={`p-3 rounded-xl transition-colors ${activeTab === 'tributario' ? 'bg-white text-orange-600 shadow-md' : 'text-white/80 hover:bg-white/20'}`} title="Tributário">
+            <Landmark size={24} />
+            </button>
+        </div>
+      </nav>
+
+      {/* Main Content */}
+      <main className="md:ml-20 p-8 max-w-7xl mx-auto">
+        
+        {/* Header Dinâmico */}
+        <header className="flex justify-between items-center mb-10">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900">
+                {activeTab === 'overview' && 'Relatório Financeiro Estratégico'}
+                {activeTab === 'pessoal' && 'Análise de Pessoal e Sócios'}
+                {activeTab === 'producao' && 'Custos de Produção'}
+                {activeTab === 'logistica' && 'Logística e Administrativo'}
+                {activeTab === 'tributario' && 'Eficiência Tributária'}
+            </h1>
+            <p className="text-slate-500 mt-1">Análise de Desempenho • Novembro 2025</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="bg-white px-4 py-2 rounded-lg shadow-sm border border-slate-200 flex items-center gap-2 text-sm font-medium text-slate-600">
+              <Calendar size={16} />
+              Nov 2025
+            </div>
+            <div className="h-10 w-10 bg-orange-100 rounded-full flex items-center justify-center text-orange-700 font-bold border-2 border-white shadow-sm">
+              CF
+            </div>
+          </div>
+        </header>
+
+        {/* TAB: VISÃO GERAL */}
+        {activeTab === 'overview' && (
+          <div className="space-y-8 animate-in fade-in duration-500">
+            {/* Executive Summary Alert */}
+            <div className="bg-red-50 border-l-4 border-red-500 p-6 rounded-r-lg shadow-sm">
+              <div className="flex items-start">
+                <AlertTriangle className="text-red-600 mt-1 mr-4" size={24} />
+                <div>
+                  <h3 className="text-lg font-bold text-red-800 mb-2">Resumo Executivo: Inversão de Resultados</h3>
+                  <p className="text-red-700 leading-relaxed">
+                    A empresa migrou de um lucro de <strong>R$ 507k em Setembro</strong> para um prejuízo acumulado de <strong>R$ 476k em Novembro</strong>. 
+                    O resultado foi impactado pela "Tempestade Perfeita": queda consistente de receita (-17,1% no período) simultânea a um aumento agressivo nas despesas com Pessoal (+86%) e Imobilizado (+119%).
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* KPI Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card 
+                title="Receita Líquida (Nov)" 
+                value={formatCurrency(2422686)} 
+                subtext="vs. R$ 2.9M em Setembro"
+                trend="down"
+                icon={DollarSign}
+                color="bg-emerald-500"
+              />
+              <Card 
+                title="Despesas Totais (Nov)" 
+                value={formatCurrency(2898861)} 
+                subtext="Custo acima da receita"
+                trend="up"
+                icon={TrendingDown}
+                color="bg-red-500"
+              />
+              <Card 
+                title="Resultado Líquido (Nov)" 
+                value={formatCurrency(-476175)} 
+                subtext="Margem Líquida Negativa"
+                trend="down"
+                icon={Activity}
+                color="bg-slate-800"
+              />
+            </div>
+
+            {/* Main Chart */}
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+              <SectionHeader title="Evolução: Receita x Despesa x Lucro" subtitle="Abertura da tesoura financeira nos últimos 3 meses" />
+              <div className="h-80 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={monthlyData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b'}} dy={10} />
+                    <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b'}} tickFormatter={(value) => `R$${value/1000}k`} />
+                    <Tooltip 
+                      formatter={(value) => formatCurrency(value)}
+                      contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    />
+                    <Legend verticalAlign="top" height={36} iconType="circle" />
+                    <Bar dataKey="receita" name="Receita" fill="#10b981" barSize={40} radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="despesa" name="Despesa Total" fill="#ef4444" barSize={40} radius={[4, 4, 0, 0]} />
+                    <Line type="monotone" dataKey="lucro" name="Resultado Líquido" stroke="#1e293b" strokeWidth={3} dot={{ r: 6 }} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+             {/* Chart Categorias */}
+             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+              <SectionHeader title="Detalhamento Geral por Centro de Custo" subtitle="Visão macro das áreas" />
+              <div className="h-80 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={expenseBreakdown} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b'}} />
+                    <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b'}} tickFormatter={(value) => `${value/1000}k`} />
+                    <Tooltip formatter={(value) => formatCurrency(value)} />
+                    <Legend />
+                    <Line type="monotone" dataKey="set" name="Setembro" stroke="#94a3b8" strokeWidth={2} />
+                    <Line type="monotone" dataKey="out" name="Outubro" stroke="#cbd5e1" strokeWidth={2} strokeDasharray="5 5" />
+                    <Line type="monotone" dataKey="nov" name="Novembro (Atual)" stroke="#ea580c" strokeWidth={3} dot={{ r: 6 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB: PESSOAL */}
+        {activeTab === 'pessoal' && (
+          <div className="space-y-8 animate-in fade-in duration-500">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 {/* Chart Pessoal */}
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <SectionHeader title="Evolução: Folha vs. Pró-Labore" subtitle="Descolamento dos custos de sócios vs operação" />
+                    <div className="h-80 w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={pessoalData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                            <defs>
+                            <linearGradient id="colorFolha" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                            </linearGradient>
+                            <linearGradient id="colorProlabore" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
+                                <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                            </linearGradient>
+                            </defs>
+                            <XAxis dataKey="name" />
+                            <YAxis tickFormatter={(value) => `${value/1000}k`}/>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                            <Tooltip formatter={(value) => formatCurrency(value)} />
+                            <Legend />
+                            <Area type="monotone" dataKey="folha" name="Folha Operacional" stroke="#3b82f6" fillOpacity={1} fill="url(#colorFolha)" />
+                            <Area type="monotone" dataKey="prolabore" name="Pró-Labore" stroke="#ef4444" fillOpacity={1} fill="url(#colorProlabore)" />
+                        </AreaChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                <div className="space-y-6">
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-full">
+                        <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-orange-500"></span>
+                            Análise de Impacto
+                        </h3>
+                        <div className="space-y-4">
+                            <div className="bg-orange-50 p-4 rounded-lg border border-orange-100">
+                                <p className="text-orange-800 font-medium">Variação do Pró-Labore</p>
+                                <p className="text-3xl font-bold text-orange-600 mt-1">+8.323%</p>
+                                <p className="text-sm text-orange-600/80">De R$ 2.3k para R$ 197k</p>
+                            </div>
+                            <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                                <p className="text-blue-800 font-medium">Variação da Folha Operacional</p>
+                                <p className="text-3xl font-bold text-blue-600 mt-1">+13,5%</p>
+                                <p className="text-sm text-blue-600/80">Crescimento orgânico controlado</p>
+                            </div>
+                            <p className="text-slate-600 text-sm italic border-t pt-4 mt-4">
+                                <strong>Insight:</strong> O custo operacional da fábrica está sob controle. O desequilíbrio financeiro na conta "Pessoal" é exclusivamente derivado do aumento nas retiradas dos sócios.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB: PRODUÇÃO */}
+        {activeTab === 'producao' && (
+          <div className="space-y-8 animate-in fade-in duration-500">
+             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <SectionHeader title="Variação dos Insumos" subtitle="Comparativo Novembro vs Média Anterior" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left">
+                            <thead className="text-xs text-slate-500 uppercase bg-slate-50">
+                            <tr>
+                                <th className="px-4 py-3">Insumo</th>
+                                <th className="px-4 py-3">Valor (Nov)</th>
+                                <th className="px-4 py-3">Var %</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {productionDetails.map((item, index) => (
+                                <tr key={index} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                                <td className="px-4 py-3 font-medium text-slate-700">{item.name}</td>
+                                <td className="px-4 py-3">{formatCurrency(item.valor)}</td>
+                                <td className={`px-4 py-3 font-bold ${item.var < 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                    {item.var > 0 ? '+' : ''}{item.var}%
+                                </td>
+                                </tr>
+                            ))}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div className="flex flex-col justify-center bg-slate-50 p-6 rounded-xl">
+                        <h4 className="font-bold text-slate-700 mb-2">Correlação com Vendas</h4>
+                        <p className="text-slate-600 text-sm mb-4">
+                            A redução drástica em <strong>Farinha (-24%)</strong> e <strong>Embalagens (-63%)</strong> confirma a queda de produção. 
+                            <br/><br/>
+                            <strong>Ponto de Atenção:</strong> O item "Pão Congelado" aumentou 15% mesmo com a queda de vendas geral, sugerindo possível desperdício ou mix de vendas desfavorável.
+                        </p>
+                    </div>
+                </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB: LOGÍSTICA & ADM */}
+        {activeTab === 'logistica' && (
+            <div className="space-y-8 animate-in fade-in duration-500">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <SectionHeader title="Custos de Frota & Logística" subtitle="Impacto de Manutenção e Combustível" />
+                        <div className="h-80 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={logisticaData} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                                <XAxis type="number" tickFormatter={(value) => `R$${value/1000}k`}/>
+                                <YAxis dataKey="name" type="category" width={100}/>
+                                <Tooltip formatter={(value) => formatCurrency(value)} />
+                                <Legend />
+                                <Bar dataKey="set" name="Set" fill="#94a3b8" />
+                                <Bar dataKey="nov" name="Nov" fill="#ea580c" />
+                            </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                         <h3 className="font-bold text-slate-800 mb-4">Anomalias Administrativas</h3>
+                         <ul className="space-y-4">
+                            <li className="flex justify-between items-center p-3 bg-red-50 rounded-lg border border-red-100">
+                                <div>
+                                    <p className="font-semibold text-slate-700">Manutenção de Veículos</p>
+                                    <p className="text-xs text-slate-500">Aumento expressivo em Nov</p>
+                                </div>
+                                <span className="text-red-600 font-bold">+128% vs Set</span>
+                            </li>
+                            <li className="flex justify-between items-center p-3 bg-red-50 rounded-lg border border-red-100">
+                                <div>
+                                    <p className="font-semibold text-slate-700">Uniformes</p>
+                                    <p className="text-xs text-slate-500">Compra pontual ou erro?</p>
+                                </div>
+                                <span className="text-red-600 font-bold">+350% vs Set</span>
+                            </li>
+                             <li className="flex justify-between items-center p-3 bg-emerald-50 rounded-lg border border-emerald-100">
+                                <div>
+                                    <p className="font-semibold text-slate-700">Energia Elétrica</p>
+                                    <p className="text-xs text-slate-500">Eficiência energética</p>
+                                </div>
+                                <span className="text-emerald-600 font-bold">-38% vs Set</span>
+                            </li>
+                         </ul>
+                         <p className="mt-6 text-sm text-slate-500 leading-relaxed">
+                             A frota está consumindo recursos desproporcionais. O gasto de <strong>R$ 55k em manutenção</strong> em um único mês representa um alerta para a idade ou estado de conservação dos veículos.
+                         </p>
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {/* TAB: TRIBUTÁRIO */}
+        {activeTab === 'tributario' && (
+             <div className="space-y-8 animate-in fade-in duration-500">
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <SectionHeader title="Carga Tributária vs Receita" subtitle="Acompanhamento da eficiência fiscal" />
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        {tributarioData.map((item, index) => (
+                             <div key={index} className="p-4 rounded-xl bg-slate-50 border border-slate-100 text-center">
+                                <p className="text-slate-500 text-sm mb-1">{item.name}</p>
+                                <p className="text-xl font-bold text-slate-800">{formatCurrency(item.valor)}</p>
+                                <p className={`text-sm mt-2 font-medium ${item.var < 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                    {item.var}% (vs Out)
+                                </p>
+                             </div>
+                        ))}
+                    </div>
+
+                    <div className="bg-indigo-50 p-6 rounded-lg border border-indigo-100 flex gap-4 items-start">
+                        <Landmark className="text-indigo-600 shrink-0 mt-1" />
+                        <div>
+                            <h4 className="font-bold text-indigo-900 mb-2">Análise de Impostos sobre o Lucro</h4>
+                            <p className="text-indigo-800 text-sm leading-relaxed">
+                                A queda abrupta no <strong>IRPJ (-70%)</strong> e <strong>CSLL (-18%)</strong> reflete diretamente a piora no resultado operacional. Como a empresa apresentou prejuízo contábil no período, a base de cálculo destes impostos foi reduzida drasticamente, funcionando como um "colchão" que amorteceu ligeiramente o impacto no caixa.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+             </div>
+        )}
+
+      </main>
+    </div>
+  );
+}
